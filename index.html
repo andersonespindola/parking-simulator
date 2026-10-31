@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Estacionamento</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <!-- Informações (canto superior esquerdo) -->
+    <div id="info" class="panel">
+      <div id="scenario-label">Baliza · Treino livre</div>
+      <div id="camera-label"></div>
+      <div class="stats">
+        <span><span id="lbl-time">Tempo</span> <b id="stat-time">0:00</b></span>
+        <span>Ajustes <b id="stat-adjust">0</b></span>
+        <span><span id="lbl-hits">Batidas / meio-fio</span> <b id="stat-hits">0 / 0</b></span>
+      </div>
+    </div>
+
+    <!-- Vista de cima com rodas e sensores (canto superior direito) -->
+    <div id="sensor-panel" class="panel">
+      <svg id="topview" viewBox="0 0 120 200" width="120" height="200">
+        <rect x="35" y="40" width="50" height="120" rx="12" fill="#c8102e" />
+        <rect x="40" y="72" width="40" height="22" rx="4" fill="#223344" />
+        <rect x="40" y="128" width="40" height="14" rx="3" fill="#223344" />
+        <rect x="40" y="94" width="40" height="34" fill="#a00d24" />
+        <rect id="tv-wheel-fl" x="33" y="53" width="8" height="18" rx="2" fill="#111" />
+        <rect id="tv-wheel-fr" x="79" y="53" width="8" height="18" rx="2" fill="#111" />
+        <rect x="33" y="131" width="8" height="18" rx="2" fill="#111" />
+        <rect x="79" y="131" width="8" height="18" rx="2" fill="#111" />
+      </svg>
+      <div id="sensor-readout"></div>
+    </div>
+
+    <!-- Painel inferior: câmbio, volante, velocidade -->
+    <div id="dash">
+      <div id="gearbox" class="panel">
+        <div id="dir-forward" class="gear">▲ Frente</div>
+        <div id="dir-reverse" class="gear">▼ Ré</div>
+      </div>
+      <div id="wheel-wrap">
+        <div id="wheel" title="Arraste para girar">
+          <svg id="wheel-rotor" viewBox="-100 -100 200 200">
+            <circle r="86" fill="none" stroke="#1d1d22" stroke-width="20" />
+            <circle r="86" fill="none" stroke="#3a3a42" stroke-width="3" />
+            <rect x="-6" y="-106" width="12" height="20" rx="2" fill="#ffcc00" />
+            <path d="M -78 -8 L -30 -14 L 30 -14 L 78 -8 L 78 10 L 30 6 L 14 76 L -14 76 L -30 6 L -78 10 Z" fill="#26262c" />
+            <circle r="26" fill="#1a1a1f" stroke="#444" stroke-width="2" />
+          </svg>
+        </div>
+        <div id="wheel-turns" class="panel"></div>
+      </div>
+      <div class="dash-right">
+        <div id="speedo" class="panel">
+          <div id="speed">0</div>
+          <div class="unit">km/h</div>
+        </div>
+        <button id="btn-finish" title="Avaliar a vaga">Terminar (Enter)</button>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <div id="keys" class="panel">
+      <b>H</b> ajuda · <b>C</b> câmera · <b>Esc</b> menu
+    </div>
+
+    <div id="help" class="panel">
+      <h3>Controles</h3>
+      <ul>
+        <li><b>W / ↑</b> andar para frente</li>
+        <li><b>S / ↓</b> dar ré (andando para frente, primeiro freia)</li>
+        <li>Soltando as teclas o carro para sozinho · <b>Espaço</b> freia forte</li>
+        <li><b>A D / ← →</b> girar o volante (ou arraste o volante na tela)</li>
+        <li><b>Enter</b> terminar e ver a avaliação</li>
+        <li><b>C</b> trocar câmera · <b>V</b> olhar para trás · <b>Z / X</b> olhar para os lados</li>
+        <li><b>T</b> linha de trajetória · <b>G</b> marcação da vaga · <b>M</b> som</li>
+        <li><b>Backspace</b> recomeçar · <b>Esc</b> menu</li>
+      </ul>
+      <p>Dando ré: volante para a direita → a traseira vai para a direita (e a frente abre para a esquerda).</p>
+    </div>
+
+    <div id="result" class="panel">
+      <h2 id="result-title"></h2>
+      <p id="result-sub"></p>
+      <ul id="result-faults"></ul>
+      <ul id="result-list"></ul>
+      <div class="buttons">
+        <button id="btn-retry">Recomeçar</button>
+        <button id="btn-continue" class="secondary">Continuar ajustando</button>
+        <button id="btn-menu" class="secondary">Menu</button>
+      </div>
+    </div>
+
+    <div id="menu">
+      <div class="menu-card">
+        <h1>Simulador de Estacionamento</h1>
+        <p class="sub">Treine a ré: o volante vira para um lado, a traseira vai para o mesmo lado e a frente vai para o outro.</p>
+        <label>Manobra
+          <select id="opt-scenario">
+            <option value="baliza">Baliza (paralela)</option>
+            <option value="vaga90">Vaga a 90° de ré</option>
+            <option value="vaga45">Vaga a 45° (diagonal)</option>
+            <option value="garagem">Garagem estreita</option>
+          </select>
+        </label>
+        <label>Dificuldade
+          <select id="opt-difficulty">
+            <option value="facil">Fácil</option>
+            <option value="padrao" selected>Padrão</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </label>
+        <label>Modo
+          <select id="opt-mode">
+            <option value="treino">Treino livre</option>
+            <option value="exame">Exame Detran</option>
+          </select>
+        </label>
+        <p id="mode-desc" class="tip"></p>
+        <label class="check"><input type="checkbox" id="opt-sensor" checked /> Sensor de estacionamento</label>
+        <button id="btn-start">Começar</button>
+        <div id="history">
+          <h4>Últimos exames</h4>
+          <ul id="history-list"></ul>
+        </div>
+        <p class="tip">Dica: use <b>C</b> para trocar de câmera. A vista do motorista mostra os três retrovisores.</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
